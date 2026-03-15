@@ -39,3 +39,19 @@ def get_pdf_text(pdf_docs):
         for page in pdf_reader.pages:
             text += page.extract_text()
     return text
+
+def get_text_chunks(text, model_name):
+    if model_name == "Google AI ":
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap = 100)
+    chunks = text_splitter.split_text(text)
+    return chunks 
+
+# Update with HuggingFaceEmbeddings 
+
+def get_vector_store(text_chunks, model_name, api_key = None):
+    if model_name == "Google AI":
+        # Replace gemini with HuggingFace all MiniLM
+        embeddings = HuggingFaceEmbeddings(model_name = "sentence-transformers/all-MiniLM-L6-v2")
+    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    vector_store.save_local("faiss_index")
+    return vector_store
