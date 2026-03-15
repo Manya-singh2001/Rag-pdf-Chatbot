@@ -70,3 +70,27 @@ def conversational_chain(model_name, vector_store = None, api_key = None):
         prompt = PromptTemplate(template = PromptTemplate, input_variables = ["context", "question"])
         chain = load_qa_chain(model, chain_type = 'stuff', prompt= prompt)
         return chain
+
+
+def user_input(user_question, model_name, api_key, pdf_docs, conversation_history):
+    if api_key is None or pdf_docs is None:
+        st.warning("Please upload PDF files and provide API key before processing.")
+        return 
+    text_chunks = get_text_chunks(get_pdf_text(pdf_docs), model_name)
+    vector_store = get_vector_store(text_chunks, model_name, api_key)
+    user_question_output = ""
+    response_output = ""
+    # updated to HuggingFace embedding 
+    if model_name == 'Google AI':
+        embeddings = HuggingFaceEmbeddings(model_name ="sentence-transformers/all-MiniLM-L6-v2" )
+        new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization= True)
+        docs = new_db.similarity_search(user_question)
+        chain = get_conversational_chain("Google AI", vector_store= new_db, api_key= api_key)
+        # huggingface update
+        response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+        user_question_output = user_question
+        response_output = response['output_text']
+        pdf_names = [pdf.name for pdf in pdf_docs] if pdf_docs else []
+        conversation_history.append((user_question_output, response_output, model_name, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ", ".join(pdf_names)))
+
+        # conversation_history.append((user_question_output, response_output, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ", ".join(pdf_names)))
